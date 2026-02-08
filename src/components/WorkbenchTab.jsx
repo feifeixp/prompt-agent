@@ -2,6 +2,7 @@ import { useState, useMemo, useEffect } from 'react'
 import { Copy, CheckCircle, AlertTriangle, CheckCircle2, Sparkles, Image, Video, Music, RotateCcw } from 'lucide-react'
 import { marked } from 'marked'
 import { getMembershipInfo } from '../utils/auth'
+import { getConfig } from '../utils/config'
 
 const sceneTemplates = [
   { id: 'commercial', label: '💼 商业广告', template: '对@图片1的[产品]进行商业化的摄像展示，[角度]参考@图片2，要求将产品的细节均有所展示，背景音恢宏大气' },
@@ -108,11 +109,14 @@ export default function WorkbenchTab({ apiConfig }) {
     setAiLoading(true)
     setAiResult('')
     try {
+      // 获取运行时配置
+      const config = await getConfig()
+
       const response = await fetch('https://openrouter.ai/api/v1/chat/completions', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
-          'Authorization': `Bearer ${import.meta.env.VITE_OPENROUTER1_API_KEY}`,
+          'Authorization': `Bearer ${config.OPENROUTER_API_KEY}`,
           'HTTP-Referer': window.location.origin,
           'X-Title': 'Seedance 2.0'
         },

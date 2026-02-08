@@ -3,6 +3,7 @@ import { Send, User, Trash2 } from 'lucide-react'
 import { marked } from 'marked'
 import { systemPrompt } from '../data/aiSystemPrompt'
 import { getMembershipInfo } from '../utils/auth'
+import { getConfig } from '../utils/config'
 
 const quickQuestions = [
   '帮我优化这个提示词：一个女生在海边走路',
@@ -51,6 +52,9 @@ export default function AIAssistantTab({ apiConfig }) {
     setLoading(true)
 
     try {
+      // 获取运行时配置
+      const config = await getConfig()
+
       const apiMessages = [
         { role: 'system', content: systemPrompt },
         ...newMessages.map(m => ({ role: m.role, content: m.content }))
@@ -60,7 +64,7 @@ export default function AIAssistantTab({ apiConfig }) {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
-          'Authorization': `Bearer ${import.meta.env.VITE_OPENROUTER1_API_KEY}`,
+          'Authorization': `Bearer ${config.OPENROUTER_API_KEY}`,
           'HTTP-Referer': window.location.origin,
           'X-Title': 'Seedance 2.0'
         },

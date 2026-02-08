@@ -6,17 +6,29 @@
 export default {
   async fetch(request, env, ctx) {
     const url = new URL(request.url);
-    
+
+    // Handle CORS preflight requests
+    if (request.method === 'OPTIONS') {
+      return new Response(null, {
+        headers: {
+          'Access-Control-Allow-Origin': '*',
+          'Access-Control-Allow-Methods': 'GET, POST, OPTIONS',
+          'Access-Control-Allow-Headers': 'Content-Type, Authorization',
+        },
+      });
+    }
+
     // Handle API proxy for environment variables
     // This allows the frontend to access environment variables securely
     if (url.pathname === '/api/config') {
       return new Response(JSON.stringify({
-        VITE_DEEPSEEK_API_KEY: env.VITE_DEEPSEEK_API_KEY || '',
-        VITE_OPENROUTER1_API_KEY: env.VITE_OPENROUTER1_API_KEY || '',
+        OPENROUTER_API_KEY: env.VITE_OPENROUTER1_API_KEY || '',
+        DEEPSEEK_API_KEY: env.VITE_DEEPSEEK_API_KEY || '',
       }), {
         headers: {
           'Content-Type': 'application/json',
           'Access-Control-Allow-Origin': '*',
+          'Cache-Control': 'no-cache, no-store, must-revalidate',
         },
       });
     }
