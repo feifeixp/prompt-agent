@@ -21,10 +21,17 @@ export default {
     // Handle API proxy for environment variables
     // This allows the frontend to access environment variables securely
     if (url.pathname === '/api/config') {
-      return new Response(JSON.stringify({
+      const config = {
         OPENROUTER_API_KEY: env.VITE_OPENROUTER1_API_KEY || '',
         DEEPSEEK_API_KEY: env.VITE_DEEPSEEK_API_KEY || '',
-      }), {
+      };
+
+      // 调试日志（生产环境中会显示在 Cloudflare Dashboard 的 Logs 中）
+      console.log('[Worker] Config request received');
+      console.log('[Worker] Has OPENROUTER key:', !!config.OPENROUTER_API_KEY);
+      console.log('[Worker] Has DEEPSEEK key:', !!config.DEEPSEEK_API_KEY);
+
+      return new Response(JSON.stringify(config), {
         headers: {
           'Content-Type': 'application/json',
           'Access-Control-Allow-Origin': '*',
