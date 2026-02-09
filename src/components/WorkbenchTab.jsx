@@ -1,5 +1,5 @@
 import { useState, useMemo, useEffect } from 'react'
-import { Copy, CheckCircle, AlertTriangle, CheckCircle2, Sparkles, Image, Video, Music, RotateCcw } from 'lucide-react'
+import { Copy, CheckCircle, AlertTriangle, CheckCircle2, Sparkles, Image, Video, Music, RotateCcw, Plus, Trash2, GripVertical } from 'lucide-react'
 import { marked } from 'marked'
 import { getMembershipInfo } from '../utils/auth'
 import { getConfig } from '../utils/config'
@@ -15,6 +15,7 @@ const sceneTemplates = [
 ]
 
 export default function WorkbenchTab({ apiConfig }) {
+  const [mode, setMode] = useState('single') // 'single' 或 'multi'
   const [prompt, setPrompt] = useState('')
   const [assets, setAssets] = useState({ images: 0, videos: 0, audios: 0 })
   const [copied, setCopied] = useState(false)
@@ -22,6 +23,11 @@ export default function WorkbenchTab({ apiConfig }) {
   const [aiResult, setAiResult] = useState('')
   const [isMember, setIsMember] = useState(false)
   const [membershipLoading, setMembershipLoading] = useState(true)
+
+  // 多镜头模式状态
+  const [shots, setShots] = useState([
+    { id: 1, duration: '2s', content: '' }
+  ])
 
   // 检查会员状态
   useEffect(() => {
@@ -102,6 +108,35 @@ export default function WorkbenchTab({ apiConfig }) {
     setPrompt(template)
   }
 
+  // 多镜头操作函数
+  const addShot = () => {
+    const newId = Math.max(...shots.map(s => s.id), 0) + 1
+    setShots([...shots, { id: newId, duration: '3s', content: '' }])
+  }
+
+  const removeShot = (id) => {
+    if (shots.length > 1) {
+      setShots(shots.filter(s => s.id !== id))
+    }
+  }
+
+  const updateShot = (id, field, value) => {
+    setShots(shots.map(s => s.id === id ? { ...s, [field]: value } : s))
+  }
+
+  const generateMultiShotPrompt = () => {
+    return shots.map((shot, index) =>
+      `镜头${index + 1}（${shot.duration}）：${shot.content || '[请描述镜头内容]'}`
+    ).join('\n\n')
+  }
+
+  const copyMultiShotPrompt = () => {
+    const fullPrompt = generateMultiShotPrompt()
+    navigator.clipboard.writeText(fullPrompt)
+    setCopied(true)
+    setTimeout(() => setCopied(false), 2000)
+  }
+
   // AI优化
   const optimizeWithAI = async () => {
     if (!prompt.trim() || !isMember) return
@@ -170,10 +205,37 @@ export default function WorkbenchTab({ apiConfig }) {
   return (
     <div className="h-[calc(100vh-120px)] overflow-y-auto">
       <div className="layout-container page-section">
-        {/* 页面标题 — 视觉层次：大标题 + 副标题 + 呼吸带 */}
-        <div className="mb-4">
-          <h2 className="text-[22px] font-semibold text-[var(--color-text)] tracking-tight mb-3">提示词工作台</h2>
-          <p className="text-[14px] text-[var(--color-text-tertiary)] leading-relaxed">编写、检查、优化你的视频生成提示词</p>
+        {/* 页面标题 + 模式切换 */}
+        <div className="mb-6">
+          <div className="flex items-center justify-between mb-3">
+            <h2 className="text-[22px] font-semibold text-[var(--color-text)] tracking-tight">提示词工作台</h2>
+            {/* 模式切换按钮 */}
+            <div className="flex gap-2 bg-[var(--color-surface)] rounded-lg p-1 border border-[var(--color-border)]">
+              <button
+                onClick={() => setMode('single')}
+                className={`px-4 py-2 rounded-md text-[13px] transition-all duration-200 ${
+                  mode === 'single'
+                    ? 'bg-[var(--color-primary)]/20 text-[var(--color-primary-light)] font-medium'
+                    : 'text-[var(--color-text-tertiary)] hover:text-[var(--color-text-secondary)]'
+                }`}
+              >
+                单段模式
+              </button>
+              <button
+                onClick={() => setMode('multi')}
+                className={`px-4 py-2 rounded-md text-[13px] transition-all duration-200 ${
+                  mode === 'multi'
+                    ? 'bg-[var(--color-primary)]/20 text-[var(--color-primary-light)] font-medium'
+                    : 'text-[var(--color-text-tertiary)] hover:text-[var(--color-text-secondary)]'
+                }`}
+              >
+                🎬 多镜头模式
+              </button>
+            </div>
+          </div>
+          <p className="text-[14px] text-[var(--color-text-tertiary)] leading-relaxed">
+            {mode === 'single' ? '编写、检查、优化你的视频生成提示词' : '分镜头编写，适合复杂场景和多机位拍摄'}
+          </p>
         </div>
 
         <div className="grid grid-cols-1 lg:grid-cols-12 gap-7 lg:gap-8">
@@ -219,48 +281,106 @@ export default function WorkbenchTab({ apiConfig }) {
 
           {/* 中栏：提示词编辑器 (5/12) */}
           <div className="lg:col-span-5 space-y-7">
-            <div className="glass-card rounded-2xl p-6 lg:p-8">
-              <div className="flex items-center justify-between mb-6">
-                <h3 className="text-[13px] font-medium text-[var(--color-text-secondary)] tracking-wide">提示词编辑</h3>
-                <div className="flex gap-2">
-                  <button onClick={() => setPrompt('')} className="p-2.5 rounded-lg hover:bg-[var(--color-surface-hover)] text-[var(--color-text-tertiary)] cursor-pointer transition-colors"><RotateCcw size={14} /></button>
-                  <button onClick={copyPrompt} className="flex items-center gap-1.5 px-3.5 py-2 rounded-lg text-[12px] bg-[var(--color-surface-hover)] text-[var(--color-text-tertiary)] hover:text-[var(--color-text-secondary)] cursor-pointer transition-colors">
-                    {copied ? <><CheckCircle size={13} /> 已复制</> : <><Copy size={13} /> 复制</>}
-                  </button>
+            {mode === 'single' ? (
+              /* 单段模式 */
+              <div className="glass-card rounded-2xl p-6 lg:p-8">
+                <div className="flex items-center justify-between mb-6">
+                  <h3 className="text-[13px] font-medium text-[var(--color-text-secondary)] tracking-wide">提示词编辑</h3>
+                  <div className="flex gap-2">
+                    <button onClick={() => setPrompt('')} className="p-2.5 rounded-lg hover:bg-[var(--color-surface-hover)] text-[var(--color-text-tertiary)] cursor-pointer transition-colors"><RotateCcw size={14} /></button>
+                    <button onClick={copyPrompt} className="flex items-center gap-1.5 px-3.5 py-2 rounded-lg text-[12px] bg-[var(--color-surface-hover)] text-[var(--color-text-tertiary)] hover:text-[var(--color-text-secondary)] cursor-pointer transition-colors">
+                      {copied ? <><CheckCircle size={13} /> 已复制</> : <><Copy size={13} /> 复制</>}
+                    </button>
+                  </div>
+                </div>
+                <textarea
+                  value={prompt}
+                  onChange={e => setPrompt(e.target.value)}
+                  placeholder="在这里输入你的提示词...&#10;&#10;例如：@图片1作为首帧画面，镜头跟拍走在樱花树下的女生..."
+                  className="w-full h-72 lg:h-80 px-5 py-5 rounded-xl bg-[var(--color-bg)] border border-[var(--color-border)] text-[14px] text-[var(--color-text)] placeholder:text-[var(--color-text-tertiary)]/50 resize-none focus:outline-none focus:border-[var(--color-primary)]/50 focus:ring-1 focus:ring-[var(--color-primary)]/10 leading-[1.9] transition-all duration-300"
+                />
+                <div className="flex justify-between items-center mt-5">
+                  <span className="text-[12px] text-[var(--color-text-tertiary)]">{prompt.length} 字</span>
+                  <div className="flex items-center gap-3">
+                    {!isMember && !membershipLoading && (
+                      <span className="text-[12px] text-[var(--color-accent-red)] flex items-center gap-1.5">
+                        ⚠️ 需要会员权限
+                        <a
+                          href="https://story.neodomain.cn/home?inviteCode=Yue1413"
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="underline hover:opacity-80"
+                        >
+                          购买会员
+                        </a>
+                      </span>
+                    )}
+                    <button onClick={optimizeWithAI} disabled={aiLoading || !prompt.trim() || !isMember}
+                      className="flex items-center gap-2 px-5 py-2.5 rounded-lg btn-primary text-[13px] disabled:opacity-30 cursor-pointer disabled:cursor-not-allowed"
+                      title={!isMember ? '需要会员权限' : ''}
+                    >
+                      <Sparkles size={14} />
+                      {aiLoading ? '优化中...' : 'AI 优化'}
+                    </button>
+                  </div>
                 </div>
               </div>
-              <textarea
-                value={prompt}
-                onChange={e => setPrompt(e.target.value)}
-                placeholder="在这里输入你的提示词...&#10;&#10;例如：@图片1作为首帧画面，镜头跟拍走在樱花树下的女生..."
-                className="w-full h-72 lg:h-80 px-5 py-5 rounded-xl bg-[var(--color-bg)] border border-[var(--color-border)] text-[14px] text-[var(--color-text)] placeholder:text-[var(--color-text-tertiary)]/50 resize-none focus:outline-none focus:border-[var(--color-primary)]/50 focus:ring-1 focus:ring-[var(--color-primary)]/10 leading-[1.9] transition-all duration-300"
-              />
-              <div className="flex justify-between items-center mt-5">
-                <span className="text-[12px] text-[var(--color-text-tertiary)]">{prompt.length} 字</span>
-                <div className="flex items-center gap-3">
-                  {!isMember && !membershipLoading && (
-                    <span className="text-[12px] text-[var(--color-accent-red)] flex items-center gap-1.5">
-                      ⚠️ 需要会员权限
-                      <a
-                        href="https://story.neodomain.cn/home?inviteCode=Yue1413"
-                        target="_blank"
-                        rel="noopener noreferrer"
-                        className="underline hover:opacity-80"
-                      >
-                        购买会员
-                      </a>
-                    </span>
-                  )}
-                  <button onClick={optimizeWithAI} disabled={aiLoading || !prompt.trim() || !isMember}
-                    className="flex items-center gap-2 px-5 py-2.5 rounded-lg btn-primary text-[13px] disabled:opacity-30 cursor-pointer disabled:cursor-not-allowed"
-                    title={!isMember ? '需要会员权限' : ''}
-                  >
-                    <Sparkles size={14} />
-                    {aiLoading ? '优化中...' : 'AI 优化'}
+            ) : (
+              /* 多镜头模式 */
+              <div className="glass-card rounded-2xl p-6 lg:p-8">
+                <div className="flex items-center justify-between mb-6">
+                  <h3 className="text-[13px] font-medium text-[var(--color-text-secondary)] tracking-wide">多镜头编辑</h3>
+                  <button onClick={copyMultiShotPrompt} className="flex items-center gap-1.5 px-3.5 py-2 rounded-lg text-[12px] bg-[var(--color-surface-hover)] text-[var(--color-text-tertiary)] hover:text-[var(--color-text-secondary)] cursor-pointer transition-colors">
+                    {copied ? <><CheckCircle size={13} /> 已复制</> : <><Copy size={13} /> 复制全部</>}
                   </button>
                 </div>
+
+                {/* 镜头列表 */}
+                <div className="space-y-4 max-h-[500px] overflow-y-auto pr-2">
+                  {shots.map((shot, index) => (
+                    <div key={shot.id} className="bg-[var(--color-bg)] rounded-xl border border-[var(--color-border)] p-4 hover:border-[var(--color-border-hover)] transition-colors">
+                      <div className="flex items-center gap-3 mb-3">
+                        <div className="flex items-center gap-2 text-[var(--color-text-secondary)]">
+                          <GripVertical size={16} className="text-[var(--color-text-tertiary)]" />
+                          <span className="text-[13px] font-medium">镜头 {index + 1}</span>
+                        </div>
+                        <input
+                          type="text"
+                          value={shot.duration}
+                          onChange={(e) => updateShot(shot.id, 'duration', e.target.value)}
+                          placeholder="2s"
+                          className="w-16 px-2 py-1 rounded-md bg-[var(--color-surface)] border border-[var(--color-border)] text-center text-[12px] text-[var(--color-text)] focus:outline-none focus:border-[var(--color-primary)]/50"
+                        />
+                        <div className="flex-1"></div>
+                        {shots.length > 1 && (
+                          <button
+                            onClick={() => removeShot(shot.id)}
+                            className="p-1.5 rounded-md hover:bg-[var(--color-surface-hover)] text-[var(--color-text-tertiary)] hover:text-[var(--color-accent-red)] transition-colors"
+                          >
+                            <Trash2 size={14} />
+                          </button>
+                        )}
+                      </div>
+                      <textarea
+                        value={shot.content}
+                        onChange={(e) => updateShot(shot.id, 'content', e.target.value)}
+                        placeholder="描述这个镜头的内容...&#10;例如：长焦拍摄@图片1纯侧脸，半身，在@图片2场景中，背景虚化"
+                        className="w-full h-24 px-3 py-2 rounded-lg bg-[var(--color-surface)] border border-[var(--color-border)] text-[13px] text-[var(--color-text)] placeholder:text-[var(--color-text-tertiary)]/50 resize-none focus:outline-none focus:border-[var(--color-primary)]/50 leading-relaxed transition-colors"
+                      />
+                    </div>
+                  ))}
+                </div>
+
+                {/* 添加镜头按钮 */}
+                <button
+                  onClick={addShot}
+                  className="w-full mt-4 py-3 rounded-lg border-2 border-dashed border-[var(--color-border)] text-[13px] text-[var(--color-text-tertiary)] hover:border-[var(--color-primary)]/50 hover:text-[var(--color-primary-light)] hover:bg-[var(--color-glow)] transition-all duration-200 flex items-center justify-center gap-2"
+                >
+                  <Plus size={16} />
+                  添加镜头
+                </button>
               </div>
-            </div>
+            )}
 
             {/* AI优化结果 */}
             {aiResult && (
