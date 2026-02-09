@@ -173,7 +173,7 @@ export default function LoginPage({ onLoginSuccess }) {
             disabled={loggingIn || !isValidContact(contact) || code.length !== 6}
             className="w-full flex items-center justify-center gap-2.5 px-6 py-3.5 rounded-xl btn-primary text-[15px] disabled:opacity-30 disabled:cursor-not-allowed disabled:transform-none cursor-pointer"
           >
-            {loggingIn ? <><Loader2 size={18} className="animate-spin" /> 处理中...</> : <><LogIn size={18} /> 登录 / 注册</>}
+            {loggingIn ? <><Loader2 size={18} className="animate-spin" /> 处理中...</> : <><LogIn size={18} /> 登录</>}
           </button>
 
           {codeSent && (
@@ -181,6 +181,24 @@ export default function LoginPage({ onLoginSuccess }) {
               验证码已发送至 {contactType === 'phone' ? '手机' : '邮箱'}，请查收
             </p>
           )}
+        </div>
+
+        {/* 注册引导 */}
+        <div className="mt-6 text-center">
+          <p className="text-[13px] text-[var(--color-text-secondary)]">
+            请使用 NeoDomain 账号登录
+          </p>
+          <p className="mt-2 text-[13px] text-[var(--color-text-secondary)]">
+            还没有账号？
+            <a
+              href="https://story.neodomain.cn/home?inviteCode=Y"
+              target="_blank"
+              rel="noopener noreferrer"
+              className="ml-1 text-[var(--color-primary)] hover:text-[var(--color-primary-hover)] transition-colors font-medium"
+            >
+              在 NeoDomain 注册
+            </a>
+          </p>
         </div>
 
         <p className="mt-4 text-center text-[12px] text-[var(--color-text-tertiary)]/40 tracking-wide">
