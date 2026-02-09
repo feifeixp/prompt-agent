@@ -104,6 +104,8 @@ async function handleCasesAPI(request, env, corsHeaders) {
   const path = url.pathname
   const method = request.method
 
+  console.log('[API] Request:', method, path)
+
   try {
     // 公开 API：获取所有案例
     if (path === '/api/cases' && method === 'GET') {
@@ -166,25 +168,51 @@ async function handleCasesAPI(request, env, corsHeaders) {
         const body = await request.json()
         const { username, password } = body
 
-        console.log('[Login] Attempt:', { username, hasPassword: !!password })
+        console.log('[Login] Received request')
+        console.log('[Login] Username:', username)
+        console.log('[Login] Password length:', password ? password.length : 0)
+        console.log('[Login] Username match:', username === 'admin')
+        console.log('[Login] Password match:', password === 'admin123')
 
         // 临时硬编码验证（生产环境应该查询数据库）
-        if (username === 'admin' && password === 'admin123') {
-          const token = createJWT({ username })
-          console.log('[Login] Success for user:', username)
-          return new Response(JSON.stringify({ token }), {
+        // 使用严格相等和 trim 来避免空格问题
+        const usernameMatch = String(username).trim() === 'admin'
+        const passwordMatch = String(password).trim() === 'admin123'
+
+        if (usernameMatch && passwordMatch) {
+          const token = createJWT({ username: username.trim() })
+          console.log('[Login] ✅ Success for user:', username)
+          return new Response(JSON.stringify({
+            token,
+            success: true,
+            message: 'Login successful'
+          }), {
             headers: { ...corsHeaders, 'Content-Type': 'application/json' }
           })
         }
 
-        console.log('[Login] Failed - invalid credentials')
-        return new Response(JSON.stringify({ error: 'Invalid credentials' }), {
+        console.log('[Login] ❌ Failed - invalid credentials')
+        console.log('[Login] Expected: admin / admin123')
+        console.log('[Login] Received:', username, '/', password)
+
+        return new Response(JSON.stringify({
+          error: 'Invalid credentials',
+          debug: {
+            receivedUsername: username,
+            receivedPasswordLength: password ? password.length : 0,
+            expectedUsername: 'admin',
+            expectedPasswordLength: 8
+          }
+        }), {
           status: 401,
           headers: { ...corsHeaders, 'Content-Type': 'application/json' }
         })
       } catch (error) {
-        console.error('[Login] Error:', error)
-        return new Response(JSON.stringify({ error: 'Login error: ' + error.message }), {
+        console.error('[Login] ❌ Error:', error)
+        return new Response(JSON.stringify({
+          error: 'Login error: ' + error.message,
+          stack: error.stack
+        }), {
           status: 500,
           headers: { ...corsHeaders, 'Content-Type': 'application/json' }
         })
