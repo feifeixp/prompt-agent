@@ -70,9 +70,30 @@ export default {
 
     // Serve static assets from the dist directory
     try {
-      return await env.ASSETS.fetch(request);
+      // 尝试获取静态资源
+      const response = await env.ASSETS.fetch(request);
+
+      // 如果是 404 且不是静态资源请求（没有文件扩展名），返回 index.html 用于客户端路由
+      if (response.status === 404) {
+        const path = url.pathname;
+        const hasExtension = /\.[a-zA-Z0-9]+$/.test(path);
+
+        // 如果是 SPA 路由（如 /admin），返回 index.html
+        if (!hasExtension) {
+          const indexRequest = new Request(new URL('/', request.url), request);
+          return await env.ASSETS.fetch(indexRequest);
+        }
+      }
+
+      return response;
     } catch (e) {
-      return new Response('Not Found', { status: 404 });
+      // 如果出错，尝试返回 index.html
+      try {
+        const indexRequest = new Request(new URL('/', request.url), request);
+        return await env.ASSETS.fetch(indexRequest);
+      } catch (indexError) {
+        return new Response('Not Found', { status: 404 });
+      }
     }
   },
 };
