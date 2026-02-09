@@ -16,7 +16,7 @@
     {
       "binding": "DB",
       "database_name": "prompt-agent-db",
-      "database_id": "YOUR_DATABASE_ID"
+      "database_id": "2115b9c0-6a47-4827-b52e-c116072434c4"
     }
   ]
   // 使用 wrangler secret put 命令来设置敏感的环境变量：
