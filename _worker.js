@@ -162,20 +162,33 @@ async function handleCasesAPI(request, env, corsHeaders) {
 
     // 管理员登录
     if (path === '/api/admin/login' && method === 'POST') {
-      const { username, password } = await request.json()
+      try {
+        const body = await request.json()
+        const { username, password } = body
 
-      // 临时硬编码验证（生产环境应该查询数据库）
-      if (username === 'admin' && password === 'admin123') {
-        const token = createJWT({ username })
-        return new Response(JSON.stringify({ token }), {
+        console.log('[Login] Attempt:', { username, hasPassword: !!password })
+
+        // 临时硬编码验证（生产环境应该查询数据库）
+        if (username === 'admin' && password === 'admin123') {
+          const token = createJWT({ username })
+          console.log('[Login] Success for user:', username)
+          return new Response(JSON.stringify({ token }), {
+            headers: { ...corsHeaders, 'Content-Type': 'application/json' }
+          })
+        }
+
+        console.log('[Login] Failed - invalid credentials')
+        return new Response(JSON.stringify({ error: 'Invalid credentials' }), {
+          status: 401,
+          headers: { ...corsHeaders, 'Content-Type': 'application/json' }
+        })
+      } catch (error) {
+        console.error('[Login] Error:', error)
+        return new Response(JSON.stringify({ error: 'Login error: ' + error.message }), {
+          status: 500,
           headers: { ...corsHeaders, 'Content-Type': 'application/json' }
         })
       }
-
-      return new Response(JSON.stringify({ error: 'Invalid credentials' }), {
-        status: 401,
-        headers: { ...corsHeaders, 'Content-Type': 'application/json' }
-      })
     }
 
     // 验证 token

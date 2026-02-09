@@ -111,6 +111,8 @@ export async function uploadMedia(file, token) {
  * 管理员登录
  */
 export async function adminLogin(username, password) {
+  console.log('[API] Login attempt:', { username, apiBase: API_BASE })
+
   const response = await fetch(`${API_BASE}/admin/login`, {
     method: 'POST',
     headers: {
@@ -118,11 +120,18 @@ export async function adminLogin(username, password) {
     },
     body: JSON.stringify({ username, password })
   })
-  
+
+  console.log('[API] Login response status:', response.status)
+
   if (!response.ok) {
-    throw new Error('Login failed')
+    const errorData = await response.json().catch(() => ({}))
+    console.error('[API] Login failed:', errorData)
+    throw new Error(errorData.error || 'Login failed')
   }
-  return response.json()
+
+  const data = await response.json()
+  console.log('[API] Login success, token received')
+  return data
 }
 
 /**
