@@ -167,7 +167,10 @@ export default function AdminPanel() {
     return (
       <div className="min-h-screen flex items-center justify-center bg-[var(--color-bg)]">
         <div className="glass-card rounded-2xl p-8 w-full max-w-md">
-          <h2 className="text-[20px] font-semibold text-[var(--color-text)] mb-6 text-center">管理员登录</h2>
+          <h2 className="text-[20px] font-semibold text-[var(--color-text)] mb-2 text-center">管理员登录</h2>
+          <p className="text-[13px] text-[var(--color-text-secondary)] text-center mb-6">
+            请使用 NeoDomain 账号登录
+          </p>
           <form onSubmit={handleLogin} className="space-y-4">
             <div>
               <label className="block text-[13px] text-[var(--color-text-secondary)] mb-2">用户名</label>
@@ -200,6 +203,19 @@ export default function AdminPanel() {
               {loading ? '登录中...' : '登录'}
             </button>
           </form>
+          <div className="mt-6 pt-6 border-t border-[var(--color-border)]">
+            <p className="text-[13px] text-[var(--color-text-secondary)] text-center">
+              还没有账号？
+              <a
+                href="https://story.neodomain.cn/home?inviteCode=Y"
+                target="_blank"
+                rel="noopener noreferrer"
+                className="ml-1 text-[var(--color-primary)] hover:text-[var(--color-primary-hover)] transition-colors"
+              >
+                在 NeoDomain 注册
+              </a>
+            </p>
+          </div>
         </div>
       </div>
     )
