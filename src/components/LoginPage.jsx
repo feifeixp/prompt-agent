@@ -191,7 +191,7 @@ export default function LoginPage({ onLoginSuccess }) {
           <p className="mt-2 text-[13px] text-[var(--color-text-secondary)]">
             还没有账号？
             <a
-              href="https://story.neodomain.cn/home?inviteCode=Y"
+              href="https://story.neodomain.cn/home?inviteCode=Yue1413"
               target="_blank"
               rel="noopener noreferrer"
               className="ml-1 text-[var(--color-primary)] hover:text-[var(--color-primary-hover)] transition-colors font-medium"
