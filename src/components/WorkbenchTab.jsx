@@ -1,5 +1,5 @@
 import { useState, useMemo, useEffect } from 'react'
-import { Copy, CheckCircle, AlertTriangle, CheckCircle2, Sparkles, Image, Video, Music, RotateCcw, Plus, Trash2, GripVertical } from 'lucide-react'
+import { Copy, CheckCircle, AlertTriangle, CheckCircle2, Sparkles, Image, Video, Music, RotateCcw, Plus, Trash2, GripVertical, X } from 'lucide-react'
 import { marked } from 'marked'
 import { getMembershipInfo } from '../utils/auth'
 import { getConfig } from '../utils/config'
@@ -14,6 +14,44 @@ const sceneTemplates = [
   { id: 'music', label: '🎵 音乐卡点', template: '[内容描述]，视频节奏参考@视频的画面节奏进行卡点' },
 ]
 
+// 镜头参数选项
+const shotTypes = [
+  { value: '', label: '选择景别' },
+  { value: '特写', label: '特写 (Close-up)' },
+  { value: '近景', label: '近景 (Medium Close-up)' },
+  { value: '中景', label: '中景 (Medium Shot)' },
+  { value: '全景', label: '全景 (Full Shot)' },
+  { value: '远景', label: '远景 (Long Shot)' },
+  { value: '大远景', label: '大远景 (Extreme Long Shot)' },
+]
+
+const cameraAngles = [
+  { value: '', label: '选择角度' },
+  { value: '轻微仰拍', label: '轻微仰拍 (默认)' },
+  { value: '平视', label: '平视' },
+  { value: '轻微俯拍', label: '轻微俯拍' },
+  { value: '中度仰拍', label: '中度仰拍' },
+  { value: '中度俯拍', label: '中度俯拍' },
+  { value: '极端仰拍', label: '极端仰拍' },
+  { value: '极端俯拍', label: '极端俯拍' },
+  { value: '鸟瞰', label: '鸟瞰' },
+  { value: '虫视', label: '虫视' },
+  { value: '荷兰角', label: '荷兰角 (倾斜)' },
+]
+
+const cameraMovements = [
+  { value: '', label: '选择运镜' },
+  { value: '推镜头', label: '推镜头 (Push In)' },
+  { value: '拉镜头', label: '拉镜头 (Pull Out)' },
+  { value: '摇镜头', label: '摇镜头 (Pan)' },
+  { value: '跟镜头', label: '跟镜头 (Follow)' },
+  { value: '环绕镜头', label: '环绕镜头 (Orbit)' },
+  { value: '一镜到底', label: '一镜到底 (One Take)' },
+  { value: '希区柯克变焦', label: '希区柯克变焦' },
+  { value: '鱼眼镜头', label: '鱼眼镜头' },
+  { value: '固定镜头', label: '固定镜头 (Static)' },
+]
+
 export default function WorkbenchTab({ apiConfig }) {
   const [mode, setMode] = useState('single') // 'single' 或 'multi'
   const [prompt, setPrompt] = useState('')
@@ -24,9 +62,19 @@ export default function WorkbenchTab({ apiConfig }) {
   const [isMember, setIsMember] = useState(false)
   const [membershipLoading, setMembershipLoading] = useState(true)
 
+  // 参考元素管理
+  const [referenceAssets, setReferenceAssets] = useState([])
+
   // 多镜头模式状态
   const [shots, setShots] = useState([
-    { id: 1, duration: '2s', content: '' }
+    {
+      id: 1,
+      duration: '2s',
+      content: '',
+      shotType: '',
+      cameraAngle: '',
+      cameraMovement: ''
+    }
   ])
 
   // 检查会员状态
@@ -108,10 +156,39 @@ export default function WorkbenchTab({ apiConfig }) {
     setPrompt(template)
   }
 
+  // 参考元素操作
+  const addReferenceAsset = (type) => {
+    const newId = referenceAssets.filter(a => a.type === type).length + 1
+    const newAsset = {
+      id: Date.now(),
+      type, // 'image' | 'video' | 'audio'
+      name: `${type === 'image' ? '图片' : type === 'video' ? '视频' : '音频'}${newId}`,
+      description: ''
+    }
+    setReferenceAssets([...referenceAssets, newAsset])
+  }
+
+  const removeReferenceAsset = (id) => {
+    setReferenceAssets(referenceAssets.filter(a => a.id !== id))
+  }
+
+  const updateReferenceAsset = (id, field, value) => {
+    setReferenceAssets(referenceAssets.map(a =>
+      a.id === id ? { ...a, [field]: value } : a
+    ))
+  }
+
   // 多镜头操作函数
   const addShot = () => {
     const newId = Math.max(...shots.map(s => s.id), 0) + 1
-    setShots([...shots, { id: newId, duration: '3s', content: '' }])
+    setShots([...shots, {
+      id: newId,
+      duration: '3s',
+      content: '',
+      shotType: '',
+      cameraAngle: '',
+      cameraMovement: ''
+    }])
   }
 
   const removeShot = (id) => {
@@ -125,9 +202,22 @@ export default function WorkbenchTab({ apiConfig }) {
   }
 
   const generateMultiShotPrompt = () => {
-    return shots.map((shot, index) =>
-      `镜头${index + 1}（${shot.duration}）：${shot.content || '[请描述镜头内容]'}`
-    ).join('\n\n')
+    return shots.map((shot, index) => {
+      let shotDesc = `镜头${index + 1}（${shot.duration}）：`
+
+      // 添加镜头参数
+      const params = []
+      if (shot.shotType) params.push(shot.shotType)
+      if (shot.cameraAngle) params.push(shot.cameraAngle)
+      if (shot.cameraMovement) params.push(shot.cameraMovement)
+
+      if (params.length > 0) {
+        shotDesc += params.join('，') + '，'
+      }
+
+      shotDesc += shot.content || '[请描述镜头内容]'
+      return shotDesc
+    }).join('\n\n')
   }
 
   const copyMultiShotPrompt = () => {
@@ -135,6 +225,15 @@ export default function WorkbenchTab({ apiConfig }) {
     navigator.clipboard.writeText(fullPrompt)
     setCopied(true)
     setTimeout(() => setCopied(false), 2000)
+  }
+
+  // 插入@引用到镜头内容
+  const insertReference = (shotId, assetName) => {
+    const shot = shots.find(s => s.id === shotId)
+    if (shot) {
+      const newContent = shot.content + `@${assetName}`
+      updateShot(shotId, 'content', newContent)
+    }
   }
 
   // AI优化
@@ -327,59 +426,158 @@ export default function WorkbenchTab({ apiConfig }) {
               </div>
             ) : (
               /* 多镜头模式 */
-              <div className="glass-card rounded-2xl p-6 lg:p-8">
-                <div className="flex items-center justify-between mb-6">
-                  <h3 className="text-[13px] font-medium text-[var(--color-text-secondary)] tracking-wide">多镜头编辑</h3>
-                  <button onClick={copyMultiShotPrompt} className="flex items-center gap-1.5 px-3.5 py-2 rounded-lg text-[12px] bg-[var(--color-surface-hover)] text-[var(--color-text-tertiary)] hover:text-[var(--color-text-secondary)] cursor-pointer transition-colors">
-                    {copied ? <><CheckCircle size={13} /> 已复制</> : <><Copy size={13} /> 复制全部</>}
+              <>
+                {/* 参考元素管理 */}
+                <div className="glass-card rounded-2xl p-6 lg:p-7">
+                  <div className="flex items-center justify-between mb-4">
+                    <h3 className="text-[13px] font-medium text-[var(--color-text-secondary)] tracking-wide">参考元素</h3>
+                    <div className="flex gap-2">
+                      <button onClick={() => addReferenceAsset('image')} className="p-2 rounded-lg hover:bg-[var(--color-surface-hover)] text-[var(--color-accent-blue)] transition-colors" title="添加图片">
+                        <Image size={14} />
+                      </button>
+                      <button onClick={() => addReferenceAsset('video')} className="p-2 rounded-lg hover:bg-[var(--color-surface-hover)] text-[var(--color-accent-green)] transition-colors" title="添加视频">
+                        <Video size={14} />
+                      </button>
+                      <button onClick={() => addReferenceAsset('audio')} className="p-2 rounded-lg hover:bg-[var(--color-surface-hover)] text-[var(--color-accent-violet)] transition-colors" title="添加音频">
+                        <Music size={14} />
+                      </button>
+                    </div>
+                  </div>
+
+                  {referenceAssets.length === 0 ? (
+                    <div className="text-center py-6 text-[12px] text-[var(--color-text-tertiary)]">
+                      点击上方按钮添加参考元素
+                    </div>
+                  ) : (
+                    <div className="space-y-2 max-h-[200px] overflow-y-auto">
+                      {referenceAssets.map(asset => (
+                        <div key={asset.id} className="flex items-center gap-2 p-2 rounded-lg bg-[var(--color-surface)] border border-[var(--color-border)] hover:border-[var(--color-border-hover)] transition-colors">
+                          {asset.type === 'image' && <Image size={14} className="text-[var(--color-accent-blue)]" />}
+                          {asset.type === 'video' && <Video size={14} className="text-[var(--color-accent-green)]" />}
+                          {asset.type === 'audio' && <Music size={14} className="text-[var(--color-accent-violet)]" />}
+                          <input
+                            type="text"
+                            value={asset.name}
+                            onChange={(e) => updateReferenceAsset(asset.id, 'name', e.target.value)}
+                            className="flex-1 px-2 py-1 text-[12px] bg-transparent border-none focus:outline-none text-[var(--color-text)]"
+                            placeholder="元素名称"
+                          />
+                          <button
+                            onClick={() => removeReferenceAsset(asset.id)}
+                            className="p-1 rounded hover:bg-[var(--color-surface-hover)] text-[var(--color-text-tertiary)] hover:text-[var(--color-accent-red)] transition-colors"
+                          >
+                            <X size={12} />
+                          </button>
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                </div>
+
+                {/* 多镜头编辑 */}
+                <div className="glass-card rounded-2xl p-6 lg:p-8">
+                  <div className="flex items-center justify-between mb-6">
+                    <h3 className="text-[13px] font-medium text-[var(--color-text-secondary)] tracking-wide">多镜头编辑</h3>
+                    <button onClick={copyMultiShotPrompt} className="flex items-center gap-1.5 px-3.5 py-2 rounded-lg text-[12px] bg-[var(--color-surface-hover)] text-[var(--color-text-tertiary)] hover:text-[var(--color-text-secondary)] cursor-pointer transition-colors">
+                      {copied ? <><CheckCircle size={13} /> 已复制</> : <><Copy size={13} /> 复制全部</>}
+                    </button>
+                  </div>
+
+                  {/* 镜头列表 */}
+                  <div className="space-y-4 max-h-[500px] overflow-y-auto pr-2">
+                    {shots.map((shot, index) => (
+                      <div key={shot.id} className="bg-[var(--color-bg)] rounded-xl border border-[var(--color-border)] p-4 hover:border-[var(--color-border-hover)] transition-colors">
+                        {/* 镜头头部 */}
+                        <div className="flex items-center gap-3 mb-3">
+                          <div className="flex items-center gap-2 text-[var(--color-text-secondary)]">
+                            <GripVertical size={16} className="text-[var(--color-text-tertiary)]" />
+                            <span className="text-[13px] font-medium">镜头 {index + 1}</span>
+                          </div>
+                          <input
+                            type="text"
+                            value={shot.duration}
+                            onChange={(e) => updateShot(shot.id, 'duration', e.target.value)}
+                            placeholder="2s"
+                            className="w-16 px-2 py-1 rounded-md bg-[var(--color-surface)] border border-[var(--color-border)] text-center text-[12px] text-[var(--color-text)] focus:outline-none focus:border-[var(--color-primary)]/50"
+                          />
+                          <div className="flex-1"></div>
+                          {shots.length > 1 && (
+                            <button
+                              onClick={() => removeShot(shot.id)}
+                              className="p-1.5 rounded-md hover:bg-[var(--color-surface-hover)] text-[var(--color-text-tertiary)] hover:text-[var(--color-accent-red)] transition-colors"
+                            >
+                              <Trash2 size={14} />
+                            </button>
+                          )}
+                        </div>
+
+                        {/* 镜头参数选择 */}
+                        <div className="grid grid-cols-3 gap-2 mb-3">
+                          <select
+                            value={shot.shotType}
+                            onChange={(e) => updateShot(shot.id, 'shotType', e.target.value)}
+                            className="px-2 py-1.5 rounded-md bg-[var(--color-surface)] border border-[var(--color-border)] text-[12px] text-[var(--color-text)] focus:outline-none focus:border-[var(--color-primary)]/50"
+                          >
+                            {shotTypes.map(opt => (
+                              <option key={opt.value} value={opt.value}>{opt.label}</option>
+                            ))}
+                          </select>
+                          <select
+                            value={shot.cameraAngle}
+                            onChange={(e) => updateShot(shot.id, 'cameraAngle', e.target.value)}
+                            className="px-2 py-1.5 rounded-md bg-[var(--color-surface)] border border-[var(--color-border)] text-[12px] text-[var(--color-text)] focus:outline-none focus:border-[var(--color-primary)]/50"
+                          >
+                            {cameraAngles.map(opt => (
+                              <option key={opt.value} value={opt.value}>{opt.label}</option>
+                            ))}
+                          </select>
+                          <select
+                            value={shot.cameraMovement}
+                            onChange={(e) => updateShot(shot.id, 'cameraMovement', e.target.value)}
+                            className="px-2 py-1.5 rounded-md bg-[var(--color-surface)] border border-[var(--color-border)] text-[12px] text-[var(--color-text)] focus:outline-none focus:border-[var(--color-primary)]/50"
+                          >
+                            {cameraMovements.map(opt => (
+                              <option key={opt.value} value={opt.value}>{opt.label}</option>
+                            ))}
+                          </select>
+                        </div>
+
+                        {/* 参考元素快捷插入 */}
+                        {referenceAssets.length > 0 && (
+                          <div className="flex flex-wrap gap-1 mb-2">
+                            {referenceAssets.map(asset => (
+                              <button
+                                key={asset.id}
+                                onClick={() => insertReference(shot.id, asset.name)}
+                                className="px-2 py-1 rounded text-[11px] bg-[var(--color-surface)] border border-[var(--color-border)] text-[var(--color-text-tertiary)] hover:border-[var(--color-primary)]/50 hover:text-[var(--color-primary-light)] transition-colors"
+                              >
+                                @{asset.name}
+                              </button>
+                            ))}
+                          </div>
+                        )}
+
+                        {/* 镜头内容 */}
+                        <textarea
+                          value={shot.content}
+                          onChange={(e) => updateShot(shot.id, 'content', e.target.value)}
+                          placeholder="描述这个镜头的内容...&#10;例如：拍摄@图片1纯侧脸，半身，在@图片2场景中，背景虚化"
+                          className="w-full h-24 px-3 py-2 rounded-lg bg-[var(--color-surface)] border border-[var(--color-border)] text-[13px] text-[var(--color-text)] placeholder:text-[var(--color-text-tertiary)]/50 resize-none focus:outline-none focus:border-[var(--color-primary)]/50 leading-relaxed transition-colors"
+                        />
+                      </div>
+                    ))}
+                  </div>
+
+                  {/* 添加镜头按钮 */}
+                  <button
+                    onClick={addShot}
+                    className="w-full mt-4 py-3 rounded-lg border-2 border-dashed border-[var(--color-border)] text-[13px] text-[var(--color-text-tertiary)] hover:border-[var(--color-primary)]/50 hover:text-[var(--color-primary-light)] hover:bg-[var(--color-glow)] transition-all duration-200 flex items-center justify-center gap-2"
+                  >
+                    <Plus size={16} />
+                    添加镜头
                   </button>
                 </div>
-
-                {/* 镜头列表 */}
-                <div className="space-y-4 max-h-[500px] overflow-y-auto pr-2">
-                  {shots.map((shot, index) => (
-                    <div key={shot.id} className="bg-[var(--color-bg)] rounded-xl border border-[var(--color-border)] p-4 hover:border-[var(--color-border-hover)] transition-colors">
-                      <div className="flex items-center gap-3 mb-3">
-                        <div className="flex items-center gap-2 text-[var(--color-text-secondary)]">
-                          <GripVertical size={16} className="text-[var(--color-text-tertiary)]" />
-                          <span className="text-[13px] font-medium">镜头 {index + 1}</span>
-                        </div>
-                        <input
-                          type="text"
-                          value={shot.duration}
-                          onChange={(e) => updateShot(shot.id, 'duration', e.target.value)}
-                          placeholder="2s"
-                          className="w-16 px-2 py-1 rounded-md bg-[var(--color-surface)] border border-[var(--color-border)] text-center text-[12px] text-[var(--color-text)] focus:outline-none focus:border-[var(--color-primary)]/50"
-                        />
-                        <div className="flex-1"></div>
-                        {shots.length > 1 && (
-                          <button
-                            onClick={() => removeShot(shot.id)}
-                            className="p-1.5 rounded-md hover:bg-[var(--color-surface-hover)] text-[var(--color-text-tertiary)] hover:text-[var(--color-accent-red)] transition-colors"
-                          >
-                            <Trash2 size={14} />
-                          </button>
-                        )}
-                      </div>
-                      <textarea
-                        value={shot.content}
-                        onChange={(e) => updateShot(shot.id, 'content', e.target.value)}
-                        placeholder="描述这个镜头的内容...&#10;例如：长焦拍摄@图片1纯侧脸，半身，在@图片2场景中，背景虚化"
-                        className="w-full h-24 px-3 py-2 rounded-lg bg-[var(--color-surface)] border border-[var(--color-border)] text-[13px] text-[var(--color-text)] placeholder:text-[var(--color-text-tertiary)]/50 resize-none focus:outline-none focus:border-[var(--color-primary)]/50 leading-relaxed transition-colors"
-                      />
-                    </div>
-                  ))}
-                </div>
-
-                {/* 添加镜头按钮 */}
-                <button
-                  onClick={addShot}
-                  className="w-full mt-4 py-3 rounded-lg border-2 border-dashed border-[var(--color-border)] text-[13px] text-[var(--color-text-tertiary)] hover:border-[var(--color-primary)]/50 hover:text-[var(--color-primary-light)] hover:bg-[var(--color-glow)] transition-all duration-200 flex items-center justify-center gap-2"
-                >
-                  <Plus size={16} />
-                  添加镜头
-                </button>
-              </div>
+              </>
             )}
 
             {/* AI优化结果 */}
