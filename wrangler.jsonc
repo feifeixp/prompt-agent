@@ -10,8 +10,20 @@
     // 这些是默认值，实际部署时会被环境变量覆盖
     "VITE_DEEPSEEK_API_KEY": "",
     "VITE_OPENROUTER1_API_KEY": ""
-  }
+  },
+  // D1 数据库绑定
+  "d1_databases": [
+    {
+      "binding": "DB",
+      "database_name": "prompt-agent-db",
+      "database_id": "YOUR_DATABASE_ID"
+    }
+  ]
   // 使用 wrangler secret put 命令来设置敏感的环境变量：
   // wrangler secret put VITE_DEEPSEEK_API_KEY
   // wrangler secret put VITE_OPENROUTER1_API_KEY
+  //
+  // 创建 D1 数据库：
+  // wrangler d1 create prompt-agent-db
+  // wrangler d1 execute prompt-agent-db --file=./schema.sql
 }
